@@ -50,7 +50,7 @@ REFERENCES_DIR = os.path.join(settings.BASE_DIR, "references")
 _references_loaded = False
 
 def _load_references_bg():
-    """Load reference files into memory (one-time, background)."""
+    """Load reference files into memory (one-time, skips if already loaded)."""
     global _references_loaded
     if _references_loaded or not os.path.isdir(REFERENCES_DIR):
         return
@@ -58,12 +58,15 @@ def _load_references_bg():
     def _load():
         try:
             m = get_memory()
+            # Check if references already exist
+            existing = m.get_all(user_id="reference")
+            if existing and len(existing.get("results", [])) > 0:
+                return  # Already loaded, skip
             for f in os.listdir(REFERENCES_DIR):
                 if not f.endswith((".md", ".txt")):
                     continue
                 fpath = os.path.join(REFERENCES_DIR, f)
                 text = open(fpath, "r").read()
-                # Split into chunks of ~500 chars
                 chunks = [text[i:i+500] for i in range(0, len(text), 450)]
                 for chunk in chunks:
                     if len(chunk.strip()) > 50:
