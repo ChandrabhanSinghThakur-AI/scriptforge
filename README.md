@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="banner.png" alt="ScriptForge Banner" width="100%">
+</p>
+
+<p align="center">
   <h1 align="center">✦ ScriptForge</h1>
   <p align="center"><strong>AI-powered screenwriting tool that runs 100% on your computer.</strong></p>
   <p align="center">No cloud. No subscriptions. No data leaving your machine. Ever.</p>
