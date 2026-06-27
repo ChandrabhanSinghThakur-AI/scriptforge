@@ -206,9 +206,22 @@
             <div class="tabs">
                 <span class="tab active" onclick="switchTab('ai')">Chat</span>
                 <span class="tab" onclick="switchTab('char')">Characters</span>
+                <span class="tab" onclick="switchTab('ref')">📚 Refs</span>
             </div>
         </div>
         <div id="char-panel"><p style="color:var(--text-muted)">Start writing — characters will appear here automatically.</p></div>
+        <div id="ref-panel" style="display:none;flex:1;overflow-y:auto;padding:16px;font-size:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="color:var(--accent);font-size:13px;font-weight:600">Reference Knowledge</h3>
+                <button onclick="reloadRefs()" id="ref-btn2" style="background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit">🔄 Reload</button>
+            </div>
+            <div id="ref-list" style="color:var(--text-secondary)"><p style="color:var(--text-muted)">Loading...</p></div>
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <h4 style="color:var(--text-secondary);font-size:11px;margin-bottom:8px;font-weight:500">ADD NEW REFERENCE</h4>
+                <textarea id="ref-add-text" placeholder="Paste any writing guide, script excerpt, or technique here..." style="width:100%;height:80px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px;font-size:12px;font-family:inherit;resize:vertical;outline:none"></textarea>
+                <button onclick="addReference()" style="margin-top:6px;width:100%;background:var(--bg-elevated);border:1px solid var(--border);color:#fff;padding:8px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit">+ Add to Knowledge Base</button>
+            </div>
+        </div>
         <div id="ai-messages">
             <div class="msg welcome">I'm your writing partner for <b style="color:var(--accent)">Corporate</b>. Ask me to:
 • Write dialogue in Hinglish
@@ -232,13 +245,18 @@ let characterData={};
 
 function switchTab(tab){
     document.querySelectorAll('#ai-header .tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('char-panel').style.display='none';
+    document.getElementById('ref-panel').style.display='none';
+    document.getElementById('ai-messages').style.display='none';
+    document.getElementById('ai-input-area').style.display='none';
     if(tab==='char'){
         document.getElementById('char-panel').style.display='block';
-        document.getElementById('ai-messages').style.display='none';
-        document.getElementById('ai-input-area').style.display='none';
         document.querySelectorAll('#ai-header .tab')[1].classList.add('active');
+    }else if(tab==='ref'){
+        document.getElementById('ref-panel').style.display='block';
+        document.querySelectorAll('#ai-header .tab')[2].classList.add('active');
+        loadRefList();
     }else{
-        document.getElementById('char-panel').style.display='none';
         document.getElementById('ai-messages').style.display='flex';
         document.getElementById('ai-input-area').style.display='flex';
         document.querySelectorAll('#ai-header .tab')[0].classList.add('active');
@@ -473,12 +491,39 @@ function applyFormat(){
 }
 async function reloadRefs(){
     const btn=document.getElementById('ref-btn');
-    btn.innerHTML='<span class="ref-spinner"></span> Loading...';btn.disabled=true;
+    const btn2=document.getElementById('ref-btn2');
+    [btn,btn2].forEach(b=>{if(b){b.innerHTML='<span class="ref-spinner"></span> Loading...';b.disabled=true}});
     await fetch('/api/references/reload/',{method:'POST'});
-    // Poll until done (check every 2s for 30s)
     let dots=0;
-    const interval=setInterval(()=>{dots=(dots+1)%4;btn.innerHTML='<span class="ref-spinner"></span> Indexing'+'.'.repeat(dots)},500);
-    setTimeout(()=>{clearInterval(interval);btn.innerHTML='✅ References Updated';btn.style.color='var(--green)';setTimeout(()=>{btn.innerHTML='📚 Reload References';btn.style.color='';btn.disabled=false},3000)},15000);
+    const interval=setInterval(()=>{dots=(dots+1)%4;[btn,btn2].forEach(b=>{if(b)b.innerHTML='<span class="ref-spinner"></span> Indexing'+'.'.repeat(dots)})},500);
+    setTimeout(()=>{clearInterval(interval);[btn,btn2].forEach(b=>{if(b){b.innerHTML='✅ Done';b.style.color='var(--green)'}});setTimeout(()=>{[btn,btn2].forEach(b=>{if(b){b.innerHTML=b.id==='ref-btn'?'📚 Reload References':'🔄 Reload';b.style.color='#fff';b.disabled=false}});loadRefList()},2000)},15000);
+}
+async function loadRefList(){
+    const el=document.getElementById('ref-list');
+    el.innerHTML='<p style="color:var(--text-muted)"><span class="ref-spinner"></span> Loading...</p>';
+    try{
+        const r=await fetch('/api/memories/');
+        const d=await r.json();
+        let html=`<div style="margin-bottom:8px;color:var(--text-muted);font-size:11px">${d.total_references} reference chunks • ${d.total_conversations} conversations</div>`;
+        if(d.references.length===0){
+            html+='<p style="color:var(--text-muted)">No references loaded yet. Click Reload or add below.</p>';
+        }else{
+            for(const ref of d.references.slice(0,20)){
+                html+=`<div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;color:var(--text-secondary);line-height:1.5">${escHtml(ref.memory)}</div>`;
+            }
+            if(d.total_references>20)html+=`<p style="color:var(--text-muted);font-size:10px">...and ${d.total_references-20} more</p>`;
+        }
+        el.innerHTML=html;
+    }catch(e){el.innerHTML='<p style="color:var(--rose)">Failed to load</p>'}
+}
+async function addReference(){
+    const text=document.getElementById('ref-add-text').value.trim();
+    if(!text)return;
+    document.getElementById('ref-add-text').value='';
+    await fetch('/api/references/add/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})});
+    const el=document.getElementById('ref-list');
+    el.innerHTML='<p style="color:var(--green)">✅ Added! Indexing in background...</p>';
+    setTimeout(loadRefList,10000);
 }
 function highlightSelection(){
     const sel=window.getSelection();

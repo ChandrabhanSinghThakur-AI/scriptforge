@@ -122,6 +122,35 @@ def list_memories(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@csrf_exempt
+def add_reference(request):
+    """Add text directly as a reference to ChromaDB."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    data = json.loads(request.body)
+    text = data.get("text", "").strip()
+    if not text:
+        return JsonResponse({"error": "No text provided"}, status=400)
+    # Save as file
+    os.makedirs(REFERENCES_DIR, exist_ok=True)
+    import time
+    filename = f"custom-{int(time.time())}.md"
+    with open(os.path.join(REFERENCES_DIR, filename), "w") as f:
+        f.write(text)
+    # Index into memory
+    def _index():
+        try:
+            m = get_memory()
+            chunks = [text[i:i+500] for i in range(0, len(text), 450)]
+            for chunk in chunks:
+                if len(chunk.strip()) > 50:
+                    m.add(f"[Reference: {filename}] {chunk.strip()}", user_id="reference", metadata={"type": "reference", "source": filename})
+        except Exception:
+            pass
+    threading.Thread(target=_index, daemon=True).start()
+    return JsonResponse({"status": "added", "file": filename})
+
+
 def index(request):
     _load_references_bg()
     return render(request, "writer/index.html")
