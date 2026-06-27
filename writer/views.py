@@ -45,7 +45,36 @@ def _save_memory_bg(text, metadata=None):
     threading.Thread(target=_save, daemon=True).start()
 
 
+# --- RAG: Load reference materials into ChromaDB ---
+REFERENCES_DIR = os.path.join(settings.BASE_DIR, "references")
+_references_loaded = False
+
+def _load_references_bg():
+    """Load reference files into memory (one-time, background)."""
+    global _references_loaded
+    if _references_loaded or not os.path.isdir(REFERENCES_DIR):
+        return
+    _references_loaded = True
+    def _load():
+        try:
+            m = get_memory()
+            for f in os.listdir(REFERENCES_DIR):
+                if not f.endswith((".md", ".txt")):
+                    continue
+                fpath = os.path.join(REFERENCES_DIR, f)
+                text = open(fpath, "r").read()
+                # Split into chunks of ~500 chars
+                chunks = [text[i:i+500] for i in range(0, len(text), 450)]
+                for chunk in chunks:
+                    if len(chunk.strip()) > 50:
+                        m.add(f"[Reference: {f}] {chunk.strip()}", user_id="reference", metadata={"type": "reference", "source": f})
+        except Exception:
+            pass
+    threading.Thread(target=_load, daemon=True).start()
+
+
 def index(request):
+    _load_references_bg()
     return render(request, "writer/index.html")
 
 
@@ -178,12 +207,23 @@ def ai_assist(request):
     except Exception:
         pass
 
+    # Retrieve relevant reference material (RAG)
+    reference_context = ""
+    try:
+        ref_results = get_memory().search(prompt, user_id="reference", limit=5)
+        if ref_results and ref_results.get("results"):
+            reference_context = "\n".join([r['memory'] for r in ref_results["results"]])
+    except Exception:
+        pass
+
     full_prompt = f"""You are a professional Indian screenwriter helping write a web series called "Corporate".
 Genre: Dark comedy/thriller set in Indian startup culture.
 Tone: Raw, aggressive, ambitious — like Scam 1992 meets TVF Pitchers.
 
 COMPLETE PROJECT KNOWLEDGE (all files in the project):
 {world_knowledge[:8000]}
+
+{"SCREENWRITING REFERENCE KNOWLEDGE:" + chr(10) + reference_context if reference_context else ""}
 
 {"MEMORY FROM PAST CONVERSATIONS:" + chr(10) + relevant_memories if relevant_memories else ""}
 
