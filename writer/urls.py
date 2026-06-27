@@ -11,4 +11,5 @@ urlpatterns = [
     path("api/folder/", views.create_folder),
     path("api/ai/", views.ai_assist),
     path("api/references/reload/", views.reload_references),
+    path("api/memories/", views.list_memories),
 ]

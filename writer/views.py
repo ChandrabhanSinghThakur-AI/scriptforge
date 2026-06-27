@@ -58,7 +58,7 @@ def _load_references_bg():
     def _load():
         try:
             m = get_memory()
-            existing = m.get_all(user_id="reference")
+            existing = m.get_all(filters={"user_id": "reference"})
             if existing and len(existing.get("results", [])) > 0:
                 return
             _index_references(m)
@@ -89,7 +89,7 @@ def reload_references(request):
         try:
             m = get_memory()
             # Delete all existing references
-            existing = m.get_all(user_id="reference")
+            existing = m.get_all(filters={"user_id": "reference"})
             results = existing.get("results", []) if isinstance(existing, dict) else existing
             for r in results:
                 try:
@@ -102,6 +102,24 @@ def reload_references(request):
             pass
     threading.Thread(target=_reload, daemon=True).start()
     return JsonResponse({"status": "reloading", "message": "References are being updated. Takes ~30 seconds."})
+
+
+def list_memories(request):
+    """Show all stored memories and references."""
+    try:
+        m = get_memory()
+        writer_mems = m.get_all(filters={"user_id": "writer"})
+        ref_mems = m.get_all(filters={"user_id": "reference"})
+        w = writer_mems.get("results", []) if isinstance(writer_mems, dict) else writer_mems
+        r = ref_mems.get("results", []) if isinstance(ref_mems, dict) else ref_mems
+        return JsonResponse({
+            "conversations": [{"id": x.get("id"), "memory": x.get("memory", "")[:200]} for x in (w or [])],
+            "references": [{"id": x.get("id"), "memory": x.get("memory", "")[:200]} for x in (r or [])],
+            "total_conversations": len(w or []),
+            "total_references": len(r or []),
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 def index(request):
