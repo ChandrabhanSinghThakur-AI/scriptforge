@@ -197,6 +197,7 @@
         <div id="status-bar">
             <span id="word-count">0 words</span>
             <button onclick="reloadRefs()" id="ref-btn" style="background:var(--bg-elevated);border:1px solid var(--border);color:#fff;padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;cursor:pointer;font-family:inherit">📚 Reload References</button>
+            <button onclick="showMemories()" style="background:var(--bg-elevated);border:1px solid var(--border);color:#fff;padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;cursor:pointer;font-family:inherit">🧠 Memory</button>
             <span class="model-badge">⚡ qwen2.5:14b</span>
         </div>
     </div>
@@ -243,6 +244,15 @@
 <div id="ctx-menu">
     <div onclick="renameFile()">✏️ Rename</div>
     <div onclick="deleteFile()">🗑️ Delete</div>
+</div>
+<div id="memory-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center">
+    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;width:600px;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="font-size:16px;color:var(--text-primary)">🧠 Stored Memory</h2>
+            <button onclick="document.getElementById('memory-modal').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div id="memory-content" style="font-size:12px;color:var(--text-secondary)">Loading...</div>
+    </div>
 </div>
 <script>
 let currentFile=null,saveTimeout=null,ctxFile=null,ctxIsFolder=false;
@@ -487,6 +497,31 @@ function copyToEditor(btn){
     if(currentFile){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveFile,1000);}
 }
 function updateWC(){const t=document.getElementById('editor').innerText;const w=t.trim()?t.trim().split(/\s+/).length:0;document.getElementById('word-count').textContent=`${w} words`}
+async function showMemories(){
+    const modal=document.getElementById('memory-modal');
+    modal.style.display='flex';
+    const el=document.getElementById('memory-content');
+    el.innerHTML='<span class="ref-spinner"></span> Loading...';
+    const r=await fetch('/api/memories/');
+    const d=await r.json();
+    let html=`<div style="margin-bottom:12px;padding:8px;background:var(--bg-deep);border-radius:6px;font-size:11px;color:var(--text-muted)">💬 ${d.total_conversations} conversations • 📚 ${d.total_references} reference chunks</div>`;
+    if(d.conversations.length>0){
+        html+='<h3 style="color:var(--accent);font-size:12px;margin:12px 0 8px">💬 Conversations</h3>';
+        for(const m of d.conversations){
+            html+=`<div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;line-height:1.5">${escHtml(m.memory)}</div>`;
+        }
+    }
+    if(d.references.length>0){
+        html+='<h3 style="color:var(--green);font-size:12px;margin:12px 0 8px">📚 References (showing first 20)</h3>';
+        for(const m of d.references.slice(0,20)){
+            html+=`<div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;line-height:1.5">${escHtml(m.memory)}</div>`;
+        }
+    }
+    if(d.conversations.length===0&&d.references.length===0){
+        html+='<p style="color:var(--text-muted)">No memories stored yet. Use the AI chat or load references.</p>';
+    }
+    el.innerHTML=html;
+}
 function applyFormat(){
     const e=document.getElementById('editor');
     e.style.fontSize=document.getElementById('fmt-size').value+'px';
