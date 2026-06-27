@@ -58,22 +58,50 @@ def _load_references_bg():
     def _load():
         try:
             m = get_memory()
-            # Check if references already exist
             existing = m.get_all(user_id="reference")
             if existing and len(existing.get("results", [])) > 0:
-                return  # Already loaded, skip
-            for f in os.listdir(REFERENCES_DIR):
-                if not f.endswith((".md", ".txt")):
-                    continue
-                fpath = os.path.join(REFERENCES_DIR, f)
-                text = open(fpath, "r").read()
-                chunks = [text[i:i+500] for i in range(0, len(text), 450)]
-                for chunk in chunks:
-                    if len(chunk.strip()) > 50:
-                        m.add(f"[Reference: {f}] {chunk.strip()}", user_id="reference", metadata={"type": "reference", "source": f})
+                return
+            _index_references(m)
         except Exception:
             pass
     threading.Thread(target=_load, daemon=True).start()
+
+
+def _index_references(m):
+    """Index all reference files into ChromaDB."""
+    for f in os.listdir(REFERENCES_DIR):
+        if not f.endswith((".md", ".txt")):
+            continue
+        fpath = os.path.join(REFERENCES_DIR, f)
+        text = open(fpath, "r").read()
+        chunks = [text[i:i+500] for i in range(0, len(text), 450)]
+        for chunk in chunks:
+            if len(chunk.strip()) > 50:
+                m.add(f"[Reference: {f}] {chunk.strip()}", user_id="reference", metadata={"type": "reference", "source": f})
+
+
+@csrf_exempt
+def reload_references(request):
+    """Delete existing references and re-index from references/ folder."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    def _reload():
+        try:
+            m = get_memory()
+            # Delete all existing references
+            existing = m.get_all(user_id="reference")
+            results = existing.get("results", []) if isinstance(existing, dict) else existing
+            for r in results:
+                try:
+                    m.delete(r.get("id"), user_id="reference")
+                except Exception:
+                    pass
+            # Re-index
+            _index_references(m)
+        except Exception:
+            pass
+    threading.Thread(target=_reload, daemon=True).start()
+    return JsonResponse({"status": "reloading", "message": "References are being updated. Takes ~30 seconds."})
 
 
 def index(request):
