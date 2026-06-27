@@ -135,6 +135,8 @@
         /* ═══ STREAMING INDICATOR ═══ */
         .streaming::after{content:'▊';animation:blink .8s infinite;color:var(--accent)}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        .ref-spinner{display:inline-block;width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+        @keyframes spin{to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
@@ -471,10 +473,12 @@ function applyFormat(){
 }
 async function reloadRefs(){
     const btn=document.getElementById('ref-btn');
-    btn.textContent='📚 Reloading...';btn.disabled=true;
+    btn.innerHTML='<span class="ref-spinner"></span> Loading...';btn.disabled=true;
     await fetch('/api/references/reload/',{method:'POST'});
-    btn.textContent='📚 Done ✓';
-    setTimeout(()=>{btn.textContent='📚 Reload References';btn.disabled=false},3000);
+    // Poll until done (check every 2s for 30s)
+    let dots=0;
+    const interval=setInterval(()=>{dots=(dots+1)%4;btn.innerHTML='<span class="ref-spinner"></span> Indexing'+'.'.repeat(dots)},500);
+    setTimeout(()=>{clearInterval(interval);btn.innerHTML='✅ References Updated';btn.style.color='var(--green)';setTimeout(()=>{btn.innerHTML='📚 Reload References';btn.style.color='';btn.disabled=false},3000)},15000);
 }
 function highlightSelection(){
     const sel=window.getSelection();
