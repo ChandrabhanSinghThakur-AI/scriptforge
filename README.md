@@ -168,9 +168,20 @@ references/
 
 ### Adding your own references:
 
+**From the app (recommended):**
+1. Click **📚 Refs** tab in the right panel
+2. Click **+ New Reference File** → name it → paste content → **💾 Save**
+3. Click **🔄 Re-index** to update AI knowledge
+
+**Or manually:**
 1. Put any `.md` or `.txt` file in `references/`
-2. Restart the app
-3. AI now knows that content
+2. Click **🔄 Re-index** in the app (or restart)
+
+**View & edit existing:**
+- Click any file in the Refs tab → edit directly → Save
+
+**View all stored data:**
+- Click **🧠 Memory** button (bottom bar) → see all conversations + indexed references
 
 **Examples of what to add:**
 - Screenplay book notes (your own summaries)
