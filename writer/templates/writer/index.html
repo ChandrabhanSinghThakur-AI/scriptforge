@@ -224,9 +224,7 @@
                 <textarea id="ref-file-content" style="width:100%;height:200px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius-sm);padding:10px;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical;outline:none;line-height:1.6"></textarea>
             </div>
             <div style="padding-top:12px;border-top:1px solid var(--border)">
-                <h4 style="color:var(--text-secondary);font-size:11px;margin-bottom:8px;font-weight:500">ADD NEW REFERENCE</h4>
-                <textarea id="ref-add-text" placeholder="Paste any writing guide, script excerpt, or technique here..." style="width:100%;height:60px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px;font-size:12px;font-family:inherit;resize:vertical;outline:none"></textarea>
-                <button onclick="addReference()" style="margin-top:6px;width:100%;background:var(--bg-elevated);border:1px solid var(--border);color:#fff;padding:8px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit">+ Add to Knowledge Base</button>
+                <button onclick="createRefFile()" style="width:100%;background:var(--bg-elevated);border:1px solid var(--border);color:#fff;padding:10px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500">+ New Reference File</button>
             </div>
         </div>
         <div id="ai-messages">
@@ -535,6 +533,7 @@ async function saveRefFile(){
     const content=document.getElementById('ref-file-content').value;
     await fetch('/api/references/save/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:filename,content:content})});
     document.getElementById('ref-editing-file').textContent=filename+' ✓ Saved';
+    loadRefList();
     setTimeout(()=>{document.getElementById('ref-editing-file').textContent=filename},2000);
 }
 async function addReference(){
@@ -542,9 +541,16 @@ async function addReference(){
     if(!text)return;
     document.getElementById('ref-add-text').value='';
     await fetch('/api/references/add/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})});
-    const el=document.getElementById('ref-list');
-    el.innerHTML='<p style="color:var(--green)">✅ Added! Indexing in background...</p>';
-    setTimeout(loadRefList,10000);
+    setTimeout(loadRefList,2000);
+}
+function createRefFile(){
+    const name=prompt('Reference file name (e.g., dialogue-tips.md):');
+    if(!name)return;
+    const filename=name.endsWith('.md')||name.endsWith('.txt')?name:name+'.md';
+    document.getElementById('ref-editor-area').style.display='block';
+    document.getElementById('ref-editing-file').textContent=filename;
+    document.getElementById('ref-file-content').value='';
+    document.getElementById('ref-file-content').focus();
 }
 function highlightSelection(){
     const sel=window.getSelection();
