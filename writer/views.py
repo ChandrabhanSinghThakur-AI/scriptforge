@@ -131,13 +131,11 @@ def add_reference(request):
     text = data.get("text", "").strip()
     if not text:
         return JsonResponse({"error": "No text provided"}, status=400)
-    # Save as file
     os.makedirs(REFERENCES_DIR, exist_ok=True)
     import time
     filename = f"custom-{int(time.time())}.md"
     with open(os.path.join(REFERENCES_DIR, filename), "w") as f:
         f.write(text)
-    # Index into memory
     def _index():
         try:
             m = get_memory()
@@ -149,6 +147,44 @@ def add_reference(request):
             pass
     threading.Thread(target=_index, daemon=True).start()
     return JsonResponse({"status": "added", "file": filename})
+
+
+def list_reference_files(request):
+    """List all files in references/ folder."""
+    if not os.path.isdir(REFERENCES_DIR):
+        return JsonResponse({"files": []})
+    files = [f for f in os.listdir(REFERENCES_DIR) if f.endswith((".md", ".txt"))]
+    files.sort()
+    return JsonResponse({"files": files})
+
+
+def read_reference_file(request):
+    """Read a reference file content."""
+    filename = request.GET.get("file", "")
+    filepath = os.path.join(REFERENCES_DIR, filename)
+    if not os.path.realpath(filepath).startswith(os.path.realpath(REFERENCES_DIR)):
+        return JsonResponse({"error": "Invalid path"}, status=400)
+    if not os.path.isfile(filepath):
+        return JsonResponse({"error": "File not found"}, status=404)
+    with open(filepath, "r") as f:
+        return JsonResponse({"file": filename, "content": f.read()})
+
+
+@csrf_exempt
+def save_reference_file(request):
+    """Save/update a reference file."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    data = json.loads(request.body)
+    filename = data.get("file", "")
+    content = data.get("content", "")
+    filepath = os.path.join(REFERENCES_DIR, filename)
+    if not os.path.realpath(filepath).startswith(os.path.realpath(REFERENCES_DIR)):
+        return JsonResponse({"error": "Invalid path"}, status=400)
+    os.makedirs(REFERENCES_DIR, exist_ok=True)
+    with open(filepath, "w") as f:
+        f.write(content)
+    return JsonResponse({"status": "saved"})
 
 
 def index(request):

@@ -12,5 +12,8 @@ urlpatterns = [
     path("api/ai/", views.ai_assist),
     path("api/references/reload/", views.reload_references),
     path("api/references/add/", views.add_reference),
+    path("api/references/files/", views.list_reference_files),
+    path("api/references/read/", views.read_reference_file),
+    path("api/references/save/", views.save_reference_file),
     path("api/memories/", views.list_memories),
 ]
