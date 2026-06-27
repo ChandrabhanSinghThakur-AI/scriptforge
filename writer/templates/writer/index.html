@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ScriptForge — Corporate Web Series</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg-deep:#0f0f1a;
+            --bg-base:#161625;
+            --bg-surface:#1c1c30;
+            --bg-elevated:#242440;
+            --border:#2a2a45;
+            --border-subtle:#1f1f38;
+            --text-primary:#e4e4f0;
+            --text-secondary:#8888a8;
+            --text-muted:#5a5a78;
+            --accent:#7c6ff7;
+            --accent-glow:#7c6ff730;
+            --accent-subtle:#7c6ff715;
+            --green:#4ade80;
+            --green-glow:#4ade8020;
+            --amber:#f59e0b;
+            --rose:#f43f5e;
+            --radius:10px;
+            --radius-sm:6px;
+            --transition:all .2s cubic-bezier(.4,0,.2,1);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',system-ui,sans-serif;display:flex;height:100vh;background:var(--bg-deep);color:var(--text-primary);overflow:hidden}
+
+        /* Scrollbar */
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+        /* ═══ SIDEBAR ═══ */
+        #sidebar{width:250px;background:var(--bg-base);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:var(--transition)}
+        #sidebar-header{padding:20px;border-bottom:1px solid var(--border)}
+        #sidebar-header h2{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+        .brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+        .brand-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px var(--accent-glow)}
+        .brand-name{font-size:15px;font-weight:600;background:linear-gradient(135deg,#e4e4f0,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+        #file-tree{flex:1;overflow-y:auto;padding:8px 0}
+        .folder{margin-bottom:2px}
+        .folder-name{padding:8px 16px;font-size:11px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;transition:var(--transition);border-radius:var(--radius-sm);margin:0 8px}
+        .folder-name:hover{background:var(--bg-elevated);color:var(--text-secondary)}
+        .folder-name .count{margin-left:auto;background:var(--bg-elevated);padding:1px 6px;border-radius:10px;font-size:10px;font-weight:500}
+        .folder-files{padding-left:8px;display:none}
+        .folder-files.open{display:block}
+        .file-item{padding:7px 16px 7px 28px;cursor:pointer;font-size:13px;font-weight:400;border-radius:var(--radius-sm);margin:1px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary);transition:var(--transition);position:relative}
+        .file-item:hover{background:var(--bg-elevated);color:var(--text-primary)}
+        .file-item.active{background:var(--accent-subtle);color:var(--accent);font-weight:500;border-left:2px solid var(--accent)}
+        .file-item.new-file{color:var(--text-muted);font-style:italic;font-size:12px}
+        .file-item.new-file:hover{color:var(--accent)}
+
+        #sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px}
+        #sidebar-actions button{flex:1;padding:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);border-radius:var(--radius-sm);cursor:pointer;font-size:11px;font-weight:500;transition:var(--transition);font-family:inherit}
+        #sidebar-actions button:hover{background:var(--accent-subtle);border-color:var(--accent);color:var(--accent)}
+
+        /* ═══ CONTEXT MENU ═══ */
+        #ctx-menu{display:none;position:fixed;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:6px;z-index:999;min-width:140px;box-shadow:0 8px 32px rgba(0,0,0,.4);backdrop-filter:blur(12px)}
+        #ctx-menu div{padding:8px 14px;font-size:12px;cursor:pointer;border-radius:var(--radius-sm);color:var(--text-secondary);transition:var(--transition)}
+        #ctx-menu div:hover{background:var(--accent-subtle);color:var(--text-primary)}
+
+        /* ═══ EDITOR ═══ */
+        #editor-area{flex:1;display:flex;flex-direction:column;background:var(--bg-deep)}
+        #toolbar{padding:10px 24px;background:var(--bg-base);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center}
+        #toolbar .filepath{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary)}
+        #toolbar .save-indicator{display:flex;align-items:center;gap:6px}
+        #toolbar .save-indicator .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green-glow)}
+
+        /* Format bar */
+        #format-bar{padding:8px 24px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+        #format-bar label{font-size:11px;color:var(--text-muted);font-weight:500}
+        #format-bar select,#format-bar input[type="number"]{background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-family:inherit;outline:none;transition:var(--transition)}
+        #format-bar select:focus,#format-bar input[type="number"]:focus{border-color:var(--accent)}
+        #format-bar input[type="number"]{width:56px;text-align:center}
+        #format-bar input[type="color"]{width:28px;height:28px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:none;padding:0}
+        #format-bar input[type="color"]::-webkit-color-swatch-wrapper{padding:2px}
+        #format-bar input[type="color"]::-webkit-color-swatch{border:none;border-radius:3px}
+        .fmt-group{display:flex;align-items:center;gap:6px;padding-right:12px;border-right:1px solid var(--border)}
+        .fmt-group:last-child{border-right:none}
+
+        #editor{flex:1;padding:40px 56px;font-size:18px;line-height:2;background:var(--bg-deep);color:#f0f0f0;border:none;resize:none;outline:none;font-family:'JetBrains Mono',monospace;letter-spacing:.3px;caret-color:var(--accent);overflow-y:auto;white-space:pre-wrap;word-wrap:break-word}
+        #editor:empty::before{content:attr(data-placeholder);color:var(--text-muted);font-family:'Inter',sans-serif;font-style:italic}
+        #editor mark{border-radius:3px;padding:1px 3px}
+        #editor::placeholder{color:var(--text-muted);font-family:'Inter',sans-serif;font-style:italic;line-height:2}
+        #editor::selection{background:var(--accent-glow)}
+
+        #status-bar{padding:6px 24px;background:var(--bg-base);font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace}
+        #status-bar .model-badge{background:var(--bg-elevated);padding:2px 8px;border-radius:10px;font-size:10px}
+
+        /* ═══ AI PANEL ═══ */
+        #ai-panel{width:340px;background:var(--bg-base);border-left:1px solid var(--border);display:flex;flex-direction:column}
+        #ai-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        #ai-header .title{font-size:13px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:8px}
+        #ai-header .title::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        #ai-header .tabs{display:flex;gap:4px}
+        #ai-header .tab{cursor:pointer;padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:500;color:var(--text-muted);transition:var(--transition);border:1px solid transparent}
+        #ai-header .tab:hover{color:var(--text-secondary)}
+        #ai-header .tab.active{background:var(--bg-elevated);color:var(--green);border-color:var(--border)}
+
+        #ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+        #char-panel{flex:1;overflow-y:auto;padding:16px;display:none;font-size:12px;line-height:1.7}
+        #char-panel h3{color:var(--amber);margin-bottom:12px;font-size:13px;font-weight:600;letter-spacing:.5px}
+        #char-panel .char-card{background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:var(--transition)}
+        #char-panel .char-card:hover{border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)}
+        #char-panel .char-name{color:var(--accent);font-weight:600;font-size:13px;margin-bottom:6px}
+        #char-panel .char-trait{color:var(--text-secondary);margin:3px 0;padding-left:10px;border-left:2px solid var(--border);font-size:12px}
+
+        .msg{padding:12px 16px;border-radius:var(--radius);font-size:13px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;animation:fadeIn .3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .msg.user{background:var(--bg-elevated);border:1px solid var(--border);margin-left:24px;color:var(--text-primary)}
+        .msg.ai{background:var(--bg-deep);border:1px solid var(--border);position:relative;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+        .msg.ai .copy-btn{position:absolute;top:8px;right:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-muted);border-radius:var(--radius-sm);padding:4px 8px;font-size:10px;cursor:pointer;opacity:0;transition:var(--transition);font-family:'Inter',sans-serif}
+        .msg.ai:hover .copy-btn{opacity:1}
+        .msg.ai .copy-btn:hover{background:var(--accent-subtle);color:var(--accent);border-color:var(--accent)}
+        .msg.error{background:#2a1520;border:1px solid var(--rose)}
+        .msg.welcome{border:1px solid var(--border);background:var(--bg-surface);font-family:'Inter',sans-serif;color:var(--text-secondary);line-height:1.9}
+
+        #ai-input-area{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg-base)}
+        #ai-input{flex:1;padding:12px 16px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius);font-size:13px;outline:none;font-family:'Inter',sans-serif;transition:var(--transition)}
+        #ai-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+        #ai-input::placeholder{color:var(--text-muted)}
+        #ai-send{padding:12px 16px;background:linear-gradient(135deg,var(--accent),#a78bfa);border:none;color:white;border-radius:var(--radius);cursor:pointer;font-weight:600;font-size:14px;transition:var(--transition);box-shadow:0 2px 12px var(--accent-glow)}
+        #ai-send:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--accent-glow)}
+        #ai-send:active{transform:translateY(0)}
+        #ai-send:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+        /* ═══ STREAMING INDICATOR ═══ */
+        .streaming::after{content:'▊';animation:blink .8s infinite;color:var(--accent)}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <div class="brand">
+                <div class="brand-icon">✦</div>
+                <span class="brand-name">ScriptForge</span>
+            </div>
+            <h2>Corporate</h2>
+        </div>
+        <div id="file-tree"></div>
+        <div id="sidebar-actions">
+            <button onclick="createFile()">+ File</button>
+            <button onclick="createFolder()">+ Folder</button>
+        </div>
+    </div>
+    <div id="editor-area">
+        <div id="toolbar">
+            <span class="filepath" id="current-file">No file open</span>
+            <span class="save-indicator" id="save-status"><span class="dot"></span> Ready</span>
+        </div>
+        <div id="format-bar">
+            <div class="fmt-group">
+                <label>Size</label>
+                <input type="number" id="fmt-size" value="18" min="12" max="32" onchange="applyFormat()">
+            </div>
+            <div class="fmt-group">
+                <label>Font</label>
+                <select id="fmt-font" onchange="applyFormat()">
+                    <option value="'JetBrains Mono',monospace">JetBrains Mono</option>
+                    <option value="'Courier New',monospace">Courier New</option>
+                    <option value="'Inter',sans-serif">Inter</option>
+                    <option value="Georgia,serif">Georgia</option>
+                </select>
+            </div>
+            <div class="fmt-group">
+                <label>Color</label>
+                <input type="color" id="fmt-color" value="#f0f0f0" onchange="applyFormat()">
+            </div>
+            <div class="fmt-group">
+                <label>Line</label>
+                <select id="fmt-line" onchange="applyFormat()">
+                    <option value="1.8">Compact</option>
+                    <option value="2" selected>Normal</option>
+                    <option value="2.4">Relaxed</option>
+                    <option value="3">Double</option>
+                </select>
+            </div>
+            <div class="fmt-group">
+                <label>Highlight</label>
+                <input type="color" id="fmt-highlight" value="#f59e0b" title="Pick highlight color">
+                <button onclick="highlightSelection()" style="background:var(--bg-deep);border:1px solid var(--border);color:var(--text-secondary);padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit">🖍️ Mark</button>
+                <button onclick="clearHighlights()" style="background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit">✕</button>
+            </div>
+        </div>
+        <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Select a file from the sidebar to start writing..."></div>
+        <div id="status-bar">
+            <span id="word-count">0 words</span>
+            <span class="model-badge">⚡ qwen2.5:14b</span>
+        </div>
+    </div>
+    <div id="ai-panel">
+        <div id="ai-header">
+            <span class="title">AI Writer</span>
+            <div class="tabs">
+                <span class="tab active" onclick="switchTab('ai')">Chat</span>
+                <span class="tab" onclick="switchTab('char')">Characters</span>
+            </div>
+        </div>
+        <div id="char-panel"><p style="color:var(--text-muted)">Start writing — characters will appear here automatically.</p></div>
+        <div id="ai-messages">
+            <div class="msg welcome">I'm your writing partner for <b style="color:var(--accent)">Corporate</b>. Ask me to:
+• Write dialogue in Hinglish
+• Develop character arcs
+• Suggest plot twists
+• Describe scenes cinematically
+• Brainstorm episode outlines</div>
+        </div>
+        <div id="ai-input-area">
+            <input id="ai-input" placeholder="Write Chandra's intro scene..." onkeydown="if(event.key==='Enter'&&!event.shiftKey)askAI()">
+            <button id="ai-send" onclick="askAI()">↑</button>
+        </div>
+    </div>
+<div id="ctx-menu">
+    <div onclick="renameFile()">✏️ Rename</div>
+    <div onclick="deleteFile()">🗑️ Delete</div>
+</div>
+<script>
+let currentFile=null,saveTimeout=null,ctxFile=null,ctxIsFolder=false;
+let characterData={};
+
+function switchTab(tab){
+    document.querySelectorAll('#ai-header .tab').forEach(t=>t.classList.remove('active'));
+    if(tab==='char'){
+        document.getElementById('char-panel').style.display='block';
+        document.getElementById('ai-messages').style.display='none';
+        document.getElementById('ai-input-area').style.display='none';
+        document.querySelectorAll('#ai-header .tab')[1].classList.add('active');
+    }else{
+        document.getElementById('char-panel').style.display='none';
+        document.getElementById('ai-messages').style.display='flex';
+        document.getElementById('ai-input-area').style.display='flex';
+        document.querySelectorAll('#ai-header .tab')[0].classList.add('active');
+    }
+}
+
+async function loadCharacters(){
+    const r=await fetch('/api/files/');
+    const d=await r.json();
+    const charFiles=(d.tree['characters']||[]);
+    for(const f of charFiles){
+        const resp=await fetch(`/api/read/?file=${encodeURIComponent(f)}`);
+        const data=await resp.json();
+        if(data.content){
+            const name=f.split('/').pop().replace('.md','');
+            characterData[name.toLowerCase()]=data.content;
+        }
+    }
+}
+
+function detectCharacters(){
+    const text=document.getElementById('editor').innerText.toUpperCase();
+    const panel=document.getElementById('char-panel');
+    const found=[];
+    for(const [name,content] of Object.entries(characterData)){
+        if(text.includes(name.toUpperCase())){
+            found.push({name,content});
+        }
+    }
+    if(found.length===0){
+        panel.innerHTML='<p style="color:var(--text-muted)">Start writing character names — their specs will appear here.</p>';
+        return;
+    }
+    let html='<h3>Characters in Scene</h3>';
+    for(const {name,content} of found){
+        const lines=content.split('\n').filter(l=>l.trim());
+        const traits=[];
+        for(const line of lines){
+            if(line.startsWith('#'))continue;
+            if(line.startsWith('-')||line.startsWith('*')){
+                traits.push(line.replace(/^[-*]\s*/,''));
+            }else if(line.includes(':')){
+                traits.push(line.trim());
+            }
+        }
+        html+=`<div class="char-card"><div class="char-name">${name.charAt(0).toUpperCase()+name.slice(1)}</div>`;
+        for(const t of traits.slice(0,10)){
+            html+=`<div class="char-trait">${t}</div>`;
+        }
+        html+=`</div>`;
+    }
+    panel.innerHTML=html;
+}
+
+let charTimeout=null;
+document.addEventListener('click',()=>{document.getElementById('ctx-menu').style.display='none'});
+
+function showCtxMenu(e,file,isFolder){
+    e.preventDefault();
+    ctxFile=file;ctxIsFolder=!!isFolder;
+    const menu=document.getElementById('ctx-menu');
+    menu.style.display='block';
+    menu.style.left=e.clientX+'px';
+    menu.style.top=e.clientY+'px';
+}
+
+async function renameFile(){
+    if(!ctxFile)return;
+    if(ctxIsFolder){
+        const newName=prompt('Rename folder to:',ctxFile);
+        if(!newName||newName===ctxFile)return;
+        await fetch('/api/rename/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old:ctxFile,new:newName})});
+    }else{
+        const parts=ctxFile.split('/');
+        const oldName=parts.pop();
+        const folder=parts.join('/');
+        const newName=prompt('Rename to:',oldName);
+        if(!newName||newName===oldName)return;
+        const newPath=folder?folder+'/'+newName:newName;
+        await fetch('/api/rename/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old:ctxFile,new:newPath})});
+        if(currentFile===ctxFile)currentFile=newPath;
+    }
+    loadFiles();
+}
+
+async function deleteFile(){
+    if(!ctxFile)return;
+    const label=ctxIsFolder?`folder "${ctxFile}" and all its files`:`"${ctxFile}"`;
+    if(!confirm(`Delete ${label}?`))return;
+    await fetch('/api/delete/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:ctxFile})});
+    if(currentFile&&currentFile.startsWith(ctxFile)){currentFile=null;document.getElementById('editor').value='';document.getElementById('current-file').textContent='No file open';}
+    loadFiles();
+}
+
+async function loadFiles(){
+    const r=await fetch('/api/files/');
+    const d=await r.json();
+    const tree=d.tree;
+    let html='';
+    const folderIcons={'characters':'👤','episodes':'🎬','roadmap':'🗺️','world-building':'🌍','_root':'📄'};
+    const order=['episodes','characters','roadmap','world-building','_root'];
+    const folders=Object.keys(tree).sort((a,b)=>(order.indexOf(a)===-1?99:order.indexOf(a))-(order.indexOf(b)===-1?99:order.indexOf(b)));
+
+    for(const folder of folders){
+        const icon=folderIcons[folder]||'📁';
+        const label=folder==='_root'?'Other':folder;
+        const files=tree[folder];
+        html+=`<div class="folder">
+            <div class="folder-name" onclick="toggleFolder(this)" oncontextmenu="showCtxMenu(event,'${folder}',true)">${icon} ${label} <span class="count">${files.length}</span></div>
+            <div class="folder-files">`;
+        for(const file of files){
+            const name=file.split('/').pop();
+            html+=`<div class="file-item ${file===currentFile?'active':''}" onclick="openFile('${file}')" oncontextmenu="showCtxMenu(event,'${file}')">${name}</div>`;
+        }
+        if(folder!=='_root'){
+            html+=`<div class="file-item new-file" onclick="createFileIn('${folder}')">+ new file</div>`;
+        }
+        html+=`</div></div>`;
+    }
+    document.getElementById('file-tree').innerHTML=html;
+    document.querySelectorAll('.folder-files').forEach(el=>el.classList.add('open'));
+}
+
+function toggleFolder(el){el.nextElementSibling.classList.toggle('open')}
+
+async function createFileIn(folder){
+    const n=prompt(`File name inside ${folder}/\n(e.g., scene-1.md)`);
+    if(!n)return;
+    const path=folder+'/'+n;
+    await fetch('/api/save/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:path,content:''})});
+    await loadFiles();openFile(path);
+}
+
+async function openFile(f){
+    const r=await fetch(`/api/read/?file=${encodeURIComponent(f)}`);
+    const d=await r.json();
+    if(d.error)return alert(d.error);
+    currentFile=f;
+    document.getElementById('editor').innerHTML=d.content;
+    document.getElementById('current-file').textContent=f;
+    updateWC();loadFiles();detectCharacters();
+}
+
+document.getElementById('editor').addEventListener('input',()=>{
+    updateWC();
+    if(!currentFile)return;
+    clearTimeout(saveTimeout);
+    document.getElementById('save-status').innerHTML='<span class="dot" style="background:var(--amber)"></span> Editing';
+    saveTimeout=setTimeout(saveFile,1000);
+    clearTimeout(charTimeout);
+    charTimeout=setTimeout(detectCharacters,500);
+});
+
+async function saveFile(){
+    if(!currentFile)return;
+    document.getElementById('save-status').innerHTML='<span class="dot" style="background:var(--amber);animation:pulse .5s infinite"></span> Saving...';
+    await fetch('/api/save/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:currentFile,content:document.getElementById('editor').innerHTML})});
+    document.getElementById('save-status').innerHTML='<span class="dot"></span> Saved';
+}
+
+async function createFile(){
+    const n=prompt('File path (e.g., episodes/episode-1/scene-1.fountain):');
+    if(!n)return;
+    await fetch('/api/save/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:n,content:''})});
+    await loadFiles();openFile(n);
+}
+
+async function createFolder(){
+    const n=prompt('Folder name (e.g., episodes/episode-3):');
+    if(!n)return;
+    await fetch('/api/folder/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder:n})});
+    await fetch('/api/save/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:n+'/.gitkeep',content:''})});
+    loadFiles();
+}
+
+async function askAI(){
+    const input=document.getElementById('ai-input'),p=input.value.trim();
+    if(!p)return;input.value='';
+    const msgs=document.getElementById('ai-messages');
+    msgs.innerHTML+=`<div class="msg user">${escHtml(p)}</div>`;
+    const btn=document.getElementById('ai-send');btn.disabled=true;
+    msgs.innerHTML+=`<div class="msg ai streaming" id="ai-stream"><button class="copy-btn" onclick="copyToEditor(this)">📋 Paste</button></div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+
+    const ctx=document.getElementById('editor').innerText;
+    const resp=await fetch('/api/ai/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p,context:ctx})});
+    const reader=resp.body.getReader();
+    const decoder=new TextDecoder();
+    const streamEl=document.getElementById('ai-stream');
+    let fullText='';
+
+    while(true){
+        const {done,value}=await reader.read();
+        if(done)break;
+        const text=decoder.decode(value);
+        const lines=text.split('\n');
+        for(const line of lines){
+            if(line.startsWith('data: ')){
+                try{
+                    const d=JSON.parse(line.slice(6));
+                    if(d.token){fullText+=d.token;streamEl.childNodes[1]?streamEl.childNodes[1].textContent=fullText:(streamEl.appendChild(document.createTextNode(fullText)));}
+                    if(d.done)break;
+                }catch(e){}
+            }
+        }
+        msgs.scrollTop=msgs.scrollHeight;
+    }
+    streamEl.classList.remove('streaming');
+    streamEl.removeAttribute('id');
+    streamEl.innerHTML=`<button class="copy-btn" onclick="copyToEditor(this)">📋 Paste</button>${escHtml(fullText)}`;
+    btn.disabled=false;
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function copyToEditor(btn){
+    const text=btn.parentElement.textContent.replace('📋 Paste','').trim();
+    const editor=document.getElementById('editor');
+    editor.innerText+='\n\n'+text;
+    editor.scrollTop=editor.scrollHeight;
+    btn.textContent='✓ Done';
+    setTimeout(()=>{btn.textContent='📋 Paste'},1500);
+    updateWC();
+    if(currentFile){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveFile,1000);}
+}
+function updateWC(){const t=document.getElementById('editor').innerText;const w=t.trim()?t.trim().split(/\s+/).length:0;document.getElementById('word-count').textContent=`${w} words`}
+function applyFormat(){
+    const e=document.getElementById('editor');
+    e.style.fontSize=document.getElementById('fmt-size').value+'px';
+    e.style.fontFamily=document.getElementById('fmt-font').value;
+    e.style.color=document.getElementById('fmt-color').value;
+    e.style.lineHeight=document.getElementById('fmt-line').value;
+}
+function highlightSelection(){
+    const sel=window.getSelection();
+    if(!sel.rangeCount||sel.isCollapsed)return;
+    const color=document.getElementById('fmt-highlight').value;
+    const range=sel.getRangeAt(0);
+    const mark=document.createElement('mark');
+    mark.style.background=color;
+    mark.style.color='#000';
+    range.surroundContents(mark);
+    sel.removeAllRanges();
+    if(currentFile){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveFile,500);}
+}
+function clearHighlights(){
+    const editor=document.getElementById('editor');
+    editor.querySelectorAll('mark').forEach(m=>{m.replaceWith(m.textContent)});
+    if(currentFile){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveFile,500);}
+}
+loadFiles();
+loadCharacters();
+</script>
+</body>
+</html>
