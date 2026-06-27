@@ -113,24 +113,90 @@ cd scriptforge
  You ask: "Write Chandra's confrontation scene"
          │
          ▼
- ┌─────────────────────────────┐
- │  1. Embed your question     │  (nomic-embed-text → 768-dim vector)
- │  2. Search past memories    │  (ChromaDB similarity search)
- │  3. Load ALL project files  │  (characters, episodes, world)
- │  4. Build context prompt    │  (memory + files + your question)
- │  5. Send to local LLM       │  (qwen2.5:14b via Ollama)
- │  6. Stream response back    │  (real-time tokens)
- │  7. Save to memory          │  (for future context)
- └─────────────────────────────┘
+ ┌─────────────────────────────────────────────────────────┐
+ │  1. Load ALL your project files (characters, episodes)  │
+ │  2. Search REFERENCES for relevant writing techniques   │
+ │  3. Search MEMORY for past conversations                │
+ │  4. Combine everything into one smart prompt            │
+ │  5. Send to local LLM (qwen2.5:14b via Ollama)         │
+ │  6. Stream response back in real-time                   │
+ │  7. Save conversation to memory (for next time)         │
+ └─────────────────────────────────────────────────────────┘
          │
          ▼
  AI responds with a scene that knows:
  • Who Chandra is (from characters/chandra.md)
  • What happened before (from memory)
+ • How to write a proper scene (from references/)
  • The tone of your series (from all files)
 ```
 
 **The more you write, the smarter it gets.**
+
+---
+
+## 📚 References (RAG — Knowledge Base)
+
+The `references/` folder is your AI's **screenwriting library**. Drop any writing guides, screenplay techniques, or sample scripts here — the AI will use them to give better responses.
+
+### How it works:
+
+```
+references/
+├── screenplay-format-guide.md       ← How to format scripts
+├── story-structure-guide.md         ← Three-act structure, arcs
+├── sample-script-corporate-pilot.md ← Example cold open
+└── indian-webseries-writing.md      ← Hinglish dialogue patterns
+
+         │ (on first app launch)
+         ▼
+┌─────────────────────────────────────────────┐
+│  Each file is split into chunks (~500 chars) │
+│  Each chunk is converted to a vector         │
+│  (using nomic-embed-text)                    │
+│  Stored in .mem0_db/ (ChromaDB)              │
+└─────────────────────────────────────────────┘
+
+         │ (every time you ask AI something)
+         ▼
+┌─────────────────────────────────────────────┐
+│  Your question is embedded → search vectors  │
+│  Top 5 most relevant chunks are retrieved    │
+│  Added to AI prompt as expert knowledge      │
+└─────────────────────────────────────────────┘
+```
+
+### Adding your own references:
+
+1. Put any `.md` or `.txt` file in `references/`
+2. Restart the app
+3. AI now knows that content
+
+**Examples of what to add:**
+- Screenplay book notes (your own summaries)
+- Dialogue style guides
+- Sample scripts you admire
+- Genre-specific writing techniques
+- Character archetype guides
+
+### Where data is stored:
+
+```
+.mem0_db/                          ← Auto-created, DON'T commit this
+├── chroma.sqlite3                 ← All vectors + metadata
+└── <uuid>/
+    ├── data_level0.bin            ← Actual vector embeddings
+    ├── header.bin
+    ├── length.bin
+    └── link_lists.bin
+
+Contains two types of data:
+• Past conversations (user_id: "writer") — your chat history with AI
+• Reference chunks (user_id: "reference") — knowledge from references/
+• Both searchable by semantic similarity (meaning, not exact words)
+```
+
+> ⚠️ `.mem0_db/` is in `.gitignore` — personal to each user, auto-builds on first run.
 
 ---
 
@@ -148,14 +214,20 @@ scriptforge/
 │   ├── settings.py
 │   └── urls.py
 ├── writer/                    ← Main app
-│   ├── views.py               ← API endpoints + AI logic
+│   ├── views.py               ← API endpoints + AI logic + RAG
 │   ├── urls.py                ← URL routing
 │   └── templates/writer/
 │       └── index.html         ← Single-page UI (HTML/CSS/JS)
-└── manuscripts/               ← Your writing (auto-created)
-    ├── characters/
-    ├── episodes/
-    └── world-building/
+├── references/                ← AI knowledge base (RAG)
+│   ├── screenplay-format-guide.md
+│   ├── story-structure-guide.md
+│   ├── sample-script-corporate-pilot.md
+│   └── indian-webseries-writing.md
+├── manuscripts/               ← Your writing (auto-created)
+│   ├── characters/
+│   ├── episodes/
+│   └── world-building/
+└── .mem0_db/                  ← Vector storage (auto-created, gitignored)
 ```
 
 ---
